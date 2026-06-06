@@ -53,6 +53,8 @@ jobs:
           # 清理 SPM 缓存（防止二进制包损坏）
           rm -rf ~/Library/Caches/org.swift.swiftpm
           rm -rf ~/Library/Developer/Xcode/DerivedData
+          rm -rf ~/Library/Developer/Xcode/DerivedData/App-*/SourcePackages
+          rm -rf ~/Library/Developer/Xcode/SourcePackages
 
           # 设置 Apple ID 凭据供 xcodebuild 使用
           export XCODE_APPLE_ID="$APPLE_ID"
