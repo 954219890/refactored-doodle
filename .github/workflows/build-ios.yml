@@ -65,11 +65,6 @@ jobs:
           security create-keychain -p "$KEYCHAIN_PASSWORD" "$KEYCHAIN_PATH"
           security unlock-keychain -p "$KEYCHAIN_PASSWORD" "$KEYCHAIN_PATH"
 
-          # 创建自签名证书
-          CERT_PATH="${{ runner.temp }}/cert.p12"
-          security create-keychain -p "$KEYCHAIN_PASSWORD" "$KEYCHAIN_PATH"
-          security unlock-keychain -p "$KEYCHAIN_PASSWORD" "$KEYCHAIN_PATH"
-
           # 生成自签名"iPhone Developer"证书
           cat > /tmp/ssl.conf << 'EOF'
           [req]
