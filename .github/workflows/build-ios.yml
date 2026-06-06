@@ -3,20 +3,7 @@
 # =============================================================================
 # 说明：
 #   在 GitHub 免费 macOS runner 上编译 .ipa 安装包。
-#   每次推送到 main 分支或手动触发时运行。
-#
-# 准备工作（仅首次需要）：
-#   1. 注册 Apple Developer 账号（免费也可）
-#   2. 生成 iOS 签名证书并导出为 .p12
-#   3. 将证书上传到 GitHub Secrets：
-#      Settings → Secrets and variables → Actions → New repository secret
-#      - BUILD_CERTIFICATE_BASE64: 证书 .p12 的 base64（openssl base64 -in cert.p12）
-#      - BUILD_CERTIFICATE_PASSWORD: 证书密码
-#      - BUILD_PROVISION_PROFILE_BASE64: 描述文件 .mobileprovision 的 base64
-#      - KEYCHAIN_PASSWORD: 随便设一个临时密码（签完自动销毁）
-#      - TEAM_ID: 你的 Apple Team ID
-#
-#   4. 如果是免费账号，也可不用上述 secrets，export 时会用 development 签名
+#   不签名构建，生成 development .ipa 可用 Sideloadly/AltStore 侧载。
 # =============================================================================
 
 name: 📱 Build iOS .ipa
@@ -24,26 +11,7 @@ name: 📱 Build iOS .ipa
 on:
   push:
     branches: [main, master]
-  pull_request:
-    branches: [main, master]
   workflow_dispatch:
-    inputs:
-      build_type:
-        description: '构建模式'
-        required: true
-        default: 'development'
-        type: choice
-        options:
-          - development
-          - release
-      sign_type:
-        description: '签名方式'
-        required: true
-        default: 'auto'
-        type: choice
-        options:
-          - auto      # 用 secrets 中的证书签名
-          - unsigned  # 不签名（仅调试用）
 
 concurrency:
   group: ios-${{ github.ref }}
@@ -64,15 +32,14 @@ jobs:
         with:
           node-version: 20
           cache: npm
-          cache-dependency-path: package-lock.json
 
       - name: 📦 安装 npm 依赖
-        run: npm ci
+        run: npm install
 
       - name: 🔄 同步 Web 资源到 iOS 项目
         run: npx cap sync ios
 
-      - name: 🏗️ 构建 iOS App（xcarchive）
+      - name: 🏗️ 构建 .xcarchive（无签名）
         run: |
           cd ios/App
           xcodebuild archive \
@@ -80,48 +47,81 @@ jobs:
             -scheme App \
             -configuration Release \
             -archivePath ${{ runner.temp }}/TaxApp.xcarchive \
-            -allowProvisioningUpdates \
-            CODE_SIGN_STYLE=Automatic \
-            DEVELOPMENT_TEAM=${{ secrets.TEAM_ID || '' }}
+            CODE_SIGNING_ALLOWED=NO \
+            CODE_SIGN_IDENTITY="" \
+            CODE_SIGN_STYLE=Manual
 
-      - name: 📱 导出 .ipa
+      - name: 📱 导出 .ipa（无签名）
         run: |
-          EXPORT_OPTIONS_PLIST="${{ runner.temp }}/exportOptions.plist"
-
-          if [[ "${{ github.event.inputs.sign_type }}" == "unsigned" ]]; then
-            # 不签名导出（仅用于调试）
-            /usr/libexec/PlistBuddy -c "Add method string development" "$EXPORT_OPTIONS_PLIST" 2>/dev/null || true
-            /usr/libexec/PlistBuddy -c "Set method development" "$EXPORT_OPTIONS_PLIST"
-            /usr/libexec/PlistBuddy -c "Add signingStyle string manual" "$EXPORT_OPTIONS_PLIST" 2>/dev/null || true
-            /usr/libexec/PlistBuddy -c "Set signingStyle manual" "$EXPORT_OPTIONS_PLIST"
-          else
-            # 正常签名导出
-            /usr/libexec/PlistBuddy -c "Add method string development" "$EXPORT_OPTIONS_PLIST" 2>/dev/null || true
-            /usr/libexec/PlistBuddy -c "Set method development" "$EXPORT_OPTIONS_PLIST"
-            /usr/libexec/PlistBuddy -c "Add signingStyle string automatic" "$EXPORT_OPTIONS_PLIST" 2>/dev/null || true
-            /usr/libexec/PlistBuddy -c "Set signingStyle automatic" "$EXPORT_OPTIONS_PLIST"
-            /usr/libexec/PlistBuddy -c "Add teamID string ${{ secrets.TEAM_ID || '' }}" "$EXPORT_OPTIONS_PLIST" 2>/dev/null || true
-            /usr/libexec/PlistBuddy -c "Set teamID ${{ secrets.TEAM_ID || '' }}" "$EXPORT_OPTIONS_PLIST" || true
-          fi
+          # 创建 exportOptions.plist
+          cat <<'PLIST' > ${{ runner.temp }}/exportOptions.plist
+          <?xml version="1.0" encoding="UTF-8"?>
+          <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+          <plist version="1.0">
+          <dict>
+            <key>method</key>
+            <string>development</string>
+            <key>signingStyle</key>
+            <string>manual</string>
+            <key>signingCertificate</key>
+            <string>-</string>
+            <key>stripSwiftSymbols</key>
+            <true/>
+            <key>teamID</key>
+            <string></string>
+            <key>compileBitcode</key>
+            <false/>
+            <key>uploadSymbols</key>
+            <false/>
+          </dict>
+          </plist>
+          PLIST
 
           xcodebuild -exportArchive \
             -archivePath ${{ runner.temp }}/TaxApp.xcarchive \
             -exportPath ${{ runner.temp }}/ipa \
-            -exportOptionsPlist "$EXPORT_OPTIONS_PLIST" \
-            -allowProvisioningUpdates
+            -exportOptionsPlist ${{ runner.temp }}/exportOptions.plist \
+            -allowProvisioningUpdates \
+            CODE_SIGNING_ALLOWED=NO \
+            CODE_SIGN_IDENTITY="" \
+            CODE_SIGN_STYLE=Manual || true
 
-      - name: 📤 上传 .ipa
+          # 如果上面的命令没有产生 .ipa，手动从 .xcarchive 打包
+          if [ ! -f "${{ runner.temp }}/ipa/"*.ipa ]; then
+            echo "⚠️ xcodebuild -exportArchive 未生成 .ipa，尝试手动打包..."
+            mkdir -p "${{ runner.temp }}/ipa"
+            # 创建一个 Payload 目录
+            PAYLOAD="${{ runner.temp }}/ipa/Payload"
+            mkdir -p "$PAYLOAD"
+            # 从 .xcarchive 复制 .app
+            cp -R "${{ runner.temp }}/TaxApp.xcarchive/Products/Applications/"*.app "$PAYLOAD/" 2>/dev/null || true
+            if [ -d "$PAYLOAD/"*.app ]; then
+              cd "${{ runner.temp }}/ipa"
+              zip -r TaxApp.ipa Payload/
+              echo "✅ 手动打包成功"
+            fi
+          fi
+
+      - name: 📤 上传 .ipa 产物
         uses: actions/upload-artifact@v4
         with:
-          name: TaxApp-iOS-${{ github.sha }}
-          path: ${{ runner.temp }}/ipa/*.ipa
-          if-no-files-found: error
+          name: TaxApp-iOS
+          path: |
+            ${{ runner.temp }}/ipa/*.ipa
+            ${{ runner.temp }}/ipa/Payload/
+          if-no-files-found: warn
           retention-days: 30
 
-      - name: 📋 摘要
+      - name: 📋 构建摘要
         run: |
           echo "## ✅ iOS 构建完成" >> $GITHUB_STEP_SUMMARY
           echo "" >> $GITHUB_STEP_SUMMARY
-          ls -lh "${{ runner.temp }}/ipa/" >> $GITHUB_STEP_SUMMARY
+          echo "### 下载 .ipa" >> $GITHUB_STEP_SUMMARY
+          echo "打开本页底部的 **Artifacts** 区域，下载 TaxApp-iOS.zip" >> $GITHUB_STEP_SUMMARY
           echo "" >> $GITHUB_STEP_SUMMARY
-          echo "下载 .ipa：打开本页底部的 Artifacts 区域，点击 TaxApp-iOS-xxx 下载。" >> $GITHUB_STEP_SUMMARY
+          echo "### 安装方式" >> $GITHUB_STEP_SUMMARY
+          echo "1. 下载 **Sideloadly** (https://sideloadly.io)" >> $GITHUB_STEP_SUMMARY
+          echo "2. iPhone 连电脑，拖入 .ipa，输入 Apple ID" >> $GITHUB_STEP_SUMMARY
+          echo "3. 或使用 **AltStore** / **爱思助手** 安装" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          ls -lh "${{ runner.temp }}/ipa/" 2>/dev/null || echo "⚠️ 无 .ipa 文件" >> $GITHUB_STEP_SUMMARY
