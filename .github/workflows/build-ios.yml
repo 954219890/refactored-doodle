@@ -50,6 +50,10 @@ jobs:
           APPLE_ID: ${{ secrets.APPLE_ID }}
           APPLE_ID_PASS: ${{ secrets.APPLE_ID_PASS }}
         run: |
+          # 清理 SPM 缓存（防止二进制包损坏）
+          rm -rf ~/Library/Caches/org.swift.swiftpm
+          rm -rf ~/Library/Developer/Xcode/DerivedData
+
           # 设置 Apple ID 凭据供 xcodebuild 使用
           export XCODE_APPLE_ID="$APPLE_ID"
           export XCODE_APPLE_ID_PASSWORD="$APPLE_ID_PASS"
@@ -61,6 +65,7 @@ jobs:
             -configuration Release \
             -archivePath ${{ runner.temp }}/TaxApp.xcarchive \
             -allowProvisioningUpdates \
+            -disablePackageRepositoryCache \
             CODE_SIGN_STYLE=Automatic
 
       - name: 📱 导出 .ipa
