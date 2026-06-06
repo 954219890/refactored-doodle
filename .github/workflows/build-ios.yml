@@ -30,18 +30,12 @@ jobs:
       - name: ⬇️ 检出代码
         uses: actions/checkout@v4
 
-      - name: 🔧 设置 Node.js 22（用 nvm）
-        run: |
-          export NVM_DIR="$HOME/.nvm"
-          [ -s "$NVM_DIR/nvm.sh" ] && \. "$NVM_DIR/nvm.sh"
-          nvm install 22
-          nvm use 22
-          echo "Node.js 版本: $(node --version)"
-          echo "npm 版本: $(npm --version)"
-          # 将 Node 22 设为全局默认，后续步骤也能用
-          echo "node22=$(which node)" >> $GITHUB_OUTPUT
-          echo "$NVM_DIR/versions/node/$(nvm version)/bin" >> $GITHUB_PATH
-        id: node22
+      - name: 🔧 设置 Node.js 22
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - name: ✅ 确认 Node 版本
+        run: node --version && npm --version
 
       - name: 📦 安装 npm 依赖
         run: npm install
