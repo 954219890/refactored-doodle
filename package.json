@@ -9,5 +9,10 @@
     "build:ios": "npx cap sync ios && cd ios/App && xcodebuild -workspace App.xcworkspace -scheme App -configuration Release -archivePath build/TaxApp.xcarchive archive && xcodebuild -exportArchive -archivePath build/TaxApp.xcarchive -exportPath build/ipa -exportOptionsPlist exportOptions.plist -allowProvisioningUpdates"
   },
   "keywords": ["tax", "calculator", "pwa", "ios", "capacitor"],
-  "license": "MIT"
+  "license": "MIT",
+  "dependencies": {
+    "@capacitor/cli": "^8.4.0",
+    "@capacitor/core": "^8.4.0",
+    "@capacitor/ios": "^8.4.0"
+  }
 }
