@@ -711,17 +711,21 @@
     #detail {
       background: #fff;
     }
-    /* 明细页改为独立滚动：header + 汇总固定，记录列表滚动 */
+    /* 明细页改为独立滚动：header + 灰色条 + 汇总固定，记录列表滚动 */
     #detail.screen.scroll {
       display: flex;
       flex-direction: column;
       overflow: hidden;
     }
+    #detail .sub-header,
+    #detail .detail-transition,
     #detail .summary {
       flex: 0 0 auto;
+      position: relative;
+      z-index: 2;
     }
     #detail .detail-transition {
-      flex: 0 0 10px;
+      height: 10px;
     }
 
     #recordList {
@@ -731,6 +735,8 @@
       overflow-y: auto;
       overscroll-behavior: contain;
       padding-bottom: max(12px, var(--safe-bottom));
+      position: relative;
+      z-index: 1;
     }
 
     .sub-header {
