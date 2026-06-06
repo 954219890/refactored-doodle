@@ -163,7 +163,7 @@
     /* 首页：蓝色背景无缝延伸到状态栏/灵动岛区域 */
     .ios-standalone #home {
       padding-top: env(safe-area-inset-top, 0px);
-      background: #3488f5;
+      background: var(--page);
     }
     .ios-standalone #home .home-top {
       padding-top: 28px;
@@ -284,6 +284,20 @@
       background: #fff url("assets/splash-reference.png") center top / cover no-repeat;
       justify-content: center;
       align-items: center;
+      position: relative;
+      overflow: hidden;
+    }
+
+    .splash::before {
+      content: "";
+      position: absolute;
+      top: 0;
+      left: 0;
+      right: 0;
+      height: max(8px, env(safe-area-inset-top, 0px));
+      background: #fff;
+      pointer-events: none;
+      z-index: 2;
     }
 
     .splash.retired {
@@ -294,6 +308,18 @@
       background: var(--page);
       padding-bottom: var(--home-bottom-space);
       isolation: isolate;
+    }
+
+    .ios-standalone #home::before {
+      content: "";
+      position: absolute;
+      top: 0;
+      left: 0;
+      right: 0;
+      height: calc(env(safe-area-inset-top, 0px) + 46px);
+      background: linear-gradient(180deg, #2f7ff2 0%, #3488f5 72%, rgba(52, 136, 245, 0) 100%);
+      pointer-events: none;
+      z-index: 0;
     }
 
     .home::after {
