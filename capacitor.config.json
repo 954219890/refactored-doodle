@@ -1,0 +1,31 @@
+{
+  "appId": "com.personal.taxcalculator",
+  "appName": "个人所得税",
+  "webDir": "www",
+  "bundledWebRuntime": false,
+  "server": {
+    "iosScheme": "https",
+    "androidScheme": "https"
+  },
+  "ios": {
+    "contentInset": "always",
+    "preferredContentMode": "mobile",
+    "allowsLinkPreview": false,
+    "scrollEnabled": true,
+    "cordovaSwiftVersion": "5.0",
+    "minVersion": "15.0",
+    "backgroundColor": "#f5f7fb"
+  },
+  "plugins": {
+    "SplashScreen": {
+      "launchShowDuration": 1000,
+      "backgroundColor": "#f5f7fb",
+      "showSpinner": false
+    },
+    "StatusBar": {
+      "style": "DARK",
+      "backgroundColor": "#f5f7fb",
+      "overlaysWebView": false
+    }
+  }
+}

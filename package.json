@@ -1,0 +1,13 @@
+{
+  "name": "tax-calculator-ios",
+  "version": "3.1.0",
+  "private": true,
+  "description": "个人所得税 — iOS App（Capacitor + PWA）",
+  "scripts": {
+    "sync": "npx cap sync",
+    "open:ios": "npx cap open ios",
+    "build:ios": "npx cap sync ios && cd ios/App && xcodebuild -workspace App.xcworkspace -scheme App -configuration Release -archivePath build/TaxApp.xcarchive archive && xcodebuild -exportArchive -archivePath build/TaxApp.xcarchive -exportPath build/ipa -exportOptionsPlist exportOptions.plist -allowProvisioningUpdates"
+  },
+  "keywords": ["tax", "calculator", "pwa", "ios", "capacitor"],
+  "license": "MIT"
+}

@@ -1,0 +1,30 @@
+# Dependencies
+node_modules/
+
+# Capacitor native platforms (generated, but ios/ is needed for GitHub Actions)
+# ios/ is committed because it's the build source
+
+# macOS
+.DS_Store
+
+# Windows
+Thumbs.db
+
+# IDE
+.idea/
+.vscode/
+*.swp
+*.swo
+
+# Environment
+.env
+.env.local
+
+# Build artifacts
+*.ipa
+*.xcarchive
+DerivedData/
+
+# Logs
+*.log
+npm-debug.log*

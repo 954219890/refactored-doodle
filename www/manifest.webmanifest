@@ -1,0 +1,61 @@
+{
+  "id": "com.personal.tax-calculator",
+  "name": "个人所得税",
+  "short_name": "个税助手",
+  "description": "个人所得税收入纳税明细查询与模拟计算",
+  "start_url": "./index.html?source=pwa",
+  "scope": "./",
+  "display": "standalone",
+  "display_override": ["standalone", "fullscreen", "minimal-ui"],
+  "background_color": "#f5f7fb",
+  "theme_color": "#2f86ff",
+  "orientation": "portrait",
+  "categories": ["finance", "utilities", "productivity"],
+  "lang": "zh-CN",
+  "dir": "ltr",
+  "icons": [
+    {
+      "src": "assets/app-icon-192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "assets/app-icon-192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "maskable"
+    },
+    {
+      "src": "assets/app-icon-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "assets/app-icon-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "maskable"
+    },
+    {
+      "src": "assets/app-icon.png",
+      "sizes": "1024x1024",
+      "type": "image/png",
+      "purpose": "any maskable"
+    }
+  ],
+  "splash_pages": null,
+  "edge_side_panel": {},
+  "prefer_related_applications": false,
+  "related_applications": [],
+  "handle_links": "preferred",
+  "launch_handler": {
+    "client_mode": ["focus-existing", "navigate-existing"]
+  },
+  "serviceworker": {
+    "src": "sw.js",
+    "scope": "./",
+    "use_cache": false
+  }
+}
