@@ -152,15 +152,40 @@
       }
     }
 
-    /* ===== Standalone / 全屏模式 notch 适配 ===== */
-    /* 页面顶部元素（home-top / sub-header / splash）自动用 padding + 背景填满 notch 区域 */
+    /* ===== Standalone / 全屏模式 notch & 灵动岛适配 ===== */
+    /* 策略：各 screen 自己管理顶部安全区，让状态栏背景与内容无缝融合 */
 
-    /* iOS 独立模式：状态栏区域 padding */
+    /* 移除 app-stage 的全局 padding，交给各 screen */
     .ios-standalone .app-stage {
-      padding-top: env(safe-area-inset-top, 0px);
+      padding-top: 0;
     }
-    .ios-standalone .home-top {
-      padding-top: max(env(safe-area-inset-top, 0px), 12px);
+
+    /* 首页：蓝色背景无缝延伸到状态栏/灵动岛区域 */
+    .ios-standalone #home {
+      padding-top: env(safe-area-inset-top, 0px);
+      background: #3488f5;
+    }
+    .ios-standalone #home .home-top {
+      padding-top: 28px;
+    }
+    /* 非 standalone 模式：用 --safe-top 保持合理的间距 */
+    #home .home-top {
+      padding-top: calc(28px + var(--safe-top));
+    }
+
+    /* 启动屏：白色背景延伸到状态栏 */
+    .ios-standalone #splash {
+      padding-top: env(safe-area-inset-top, 0px);
+      background: #fff;
+      background-image: url("assets/splash-reference.png");
+      background-size: cover;
+      background-position: center top;
+    }
+
+    /* 子页面 header：白色背景无缝延伸到状态栏 */
+    .ios-standalone .sub-header {
+      padding-top: env(safe-area-inset-top, 0px);
+      min-height: calc(61px + env(safe-area-inset-top, 0px));
     }
 
     /* iOS 键盘打开时自动调整布局（通过 JS 添加类） */
@@ -686,11 +711,26 @@
     #detail {
       background: #fff;
     }
+    /* 明细页改为独立滚动：header + 汇总固定，记录列表滚动 */
+    #detail.screen.scroll {
+      display: flex;
+      flex-direction: column;
+      overflow: hidden;
+    }
+    #detail .summary {
+      flex: 0 0 auto;
+    }
+    #detail .detail-transition {
+      flex: 0 0 10px;
+    }
 
     #recordList {
       background: #fff;
+      flex: 1;
       min-height: 0;
-      padding-bottom: max(8px, var(--safe-bottom));
+      overflow-y: auto;
+      overscroll-behavior: contain;
+      padding-bottom: max(12px, var(--safe-bottom));
     }
 
     .sub-header {
