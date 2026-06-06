@@ -3,7 +3,11 @@
 # =============================================================================
 # 说明：
 #   在 GitHub 免费 macOS runner 上编译 .ipa 安装包。
-#   使用自签名证书签名，爱思助手 / Sideloadly 均可安装。
+#   用你的 Apple ID 自动签名，可直接用爱思助手安装。
+#
+# 所需 GitHub Secrets：
+#   APPLE_ID      - 你的 Apple ID 邮箱
+#   APPLE_ID_PASS - Apple ID 专用密码（https://appleid.apple.com/account/manage）
 # =============================================================================
 
 name: 📱 Build iOS .ipa
@@ -34,8 +38,6 @@ jobs:
         uses: actions/setup-node@v4
         with:
           node-version: 22
-      - name: ✅ 确认 Node 版本
-        run: node --version && npm --version
 
       - name: 📦 安装 npm 依赖
         run: npm install
@@ -43,116 +45,61 @@ jobs:
       - name: 🔄 同步 Web 资源到 iOS 项目
         run: npx cap sync ios
 
-      - name: 🏗️ 构建 .xcarchive
+      - name: 🏗️ 构建 .xcarchive（Apple ID 签名）
+        env:
+          APPLE_ID: ${{ secrets.APPLE_ID }}
+          APPLE_ID_PASS: ${{ secrets.APPLE_ID_PASS }}
         run: |
+          # 设置 Apple ID 凭据供 xcodebuild 使用
+          export XCODE_APPLE_ID="$APPLE_ID"
+          export XCODE_APPLE_ID_PASSWORD="$APPLE_ID_PASS"
+
           cd ios/App
           xcodebuild archive \
             -project App.xcodeproj \
             -scheme App \
             -configuration Release \
             -archivePath ${{ runner.temp }}/TaxApp.xcarchive \
-            CODE_SIGNING_ALLOWED=NO \
-            CODE_SIGN_IDENTITY="" \
-            CODE_SIGN_STYLE=Manual
+            -allowProvisioningUpdates \
+            CODE_SIGN_STYLE=Automatic
 
-      - name: 🔑 创建自签名证书并签名 .app
+      - name: 📱 导出 .ipa
+        env:
+          APPLE_ID: ${{ secrets.APPLE_ID }}
+          APPLE_ID_PASS: ${{ secrets.APPLE_ID_PASS }}
         run: |
-          # 1. 创建自签名证书
-          KEYCHAIN_PASSWORD="TempPass123"
-          KEYCHAIN_PATH="${{ runner.temp }}/ios-build.keychain"
+          export XCODE_APPLE_ID="$APPLE_ID"
+          export XCODE_APPLE_ID_PASSWORD="$APPLE_ID_PASS"
 
-          # 创建 Keychain
-          security create-keychain -p "$KEYCHAIN_PASSWORD" "$KEYCHAIN_PATH"
-          security unlock-keychain -p "$KEYCHAIN_PASSWORD" "$KEYCHAIN_PATH"
-
-          # 生成自签名"iPhone Developer"证书
-          cat > /tmp/ssl.conf << 'EOF'
-          [req]
-          distinguished_name = req_distinguished_name
-          x509_extensions = v3_req
-          prompt = no
-          [req_distinguished_name]
-          CN = iPhone Developer: Temporary
-          [v3_req]
-          keyUsage = keyEncipherment, digitalSignature
-          extendedKeyUsage = codeSigning
-          EOF
-
-          openssl req -x509 -nodes -days 365 -newkey rsa:2048 \
-            -keyout /tmp/ios.key -out /tmp/ios.crt \
-            -config /tmp/ssl.conf
-
-          # 将证书和私钥打包为 .p12
-          openssl pkcs12 -export \
-            -in /tmp/ios.crt \
-            -inkey /tmp/ios.key \
-            -out /tmp/ios.p12 \
-            -passout pass:temp
-
-          # 导入 .p12 到 Keychain（同时包含证书和私钥）
-          security import /tmp/ios.p12 \
-            -k "$KEYCHAIN_PATH" \
-            -P temp \
-            -T /usr/bin/codesign \
-            -T /usr/bin/security
-
-          security set-key-partition-list -S apple-tool:,apple:,codesign: -s -k "$KEYCHAIN_PATH" "$KEYCHAIN_PATH"
-
-          # 设置 Keychain 为默认
-          security default-keychain -s "$KEYCHAIN_PATH"
-
-          # 2. 从 .xcarchive 中取出 .app
-          APP_PATH=$(find "${{ runner.temp }}/TaxApp.xcarchive" -name "*.app" -type d | head -1)
-          echo "找到 .app: $APP_PATH"
-
-          # 3. 获取 entitlements
-          ENTITLEMENTS="${{ runner.temp }}/entitlements.plist"
-          cat > "$ENTITLEMENTS" << 'EOL'
+          # 创建 exportOptions.plist
+          cat <<'PLIST' > ${{ runner.temp }}/exportOptions.plist
           <?xml version="1.0" encoding="UTF-8"?>
           <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
           <plist version="1.0">
           <dict>
-            <key>keychain-access-groups</key>
-            <array>
-              <string>$(AppIdentifierPrefix)com.personal.taxcalculator</string>
-            </array>
-            <key>get-task-allow</key>
+            <key>method</key>
+            <string>development</string>
+            <key>signingStyle</key>
+            <string>automatic</string>
+            <key>stripSwiftSymbols</key>
             <true/>
-            <key>application-identifier</key>
-            <string>$(AppIdentifierPrefix)com.personal.taxcalculator</string>
-            <key>com.apple.developer.team-identifier</key>
-            <string></string>
+            <key>compileBitcode</key>
+            <false/>
           </dict>
           </plist>
-          EOL
+          PLIST
 
-          # 4. 用自签名证书签名
-          codesign -f -s "iPhone Developer: Temporary" \
-            --entitlements "$ENTITLEMENTS" \
-            --deep \
-            "$APP_PATH"
-
-          echo "✅ 签名完成"
-          codesign -dv "$APP_PATH" 2>&1 || true
-
-      - name: 📱 打包 .ipa
-        run: |
-          # 从 .xcarchive 复制签好名的 .app
-          APP_PATH=$(find "${{ runner.temp }}/TaxApp.xcarchive" -name "*.app" -type d | head -1)
-
-          mkdir -p "${{ runner.temp }}/ipa/Payload"
-          cp -R "$APP_PATH" "${{ runner.temp }}/ipa/Payload/"
-
-          cd "${{ runner.temp }}/ipa"
-          zip -r TaxApp.ipa Payload/
-          echo "✅ .ipa 打包完成"
-          ls -lh TaxApp.ipa
+          xcodebuild -exportArchive \
+            -archivePath ${{ runner.temp }}/TaxApp.xcarchive \
+            -exportPath ${{ runner.temp }}/ipa \
+            -exportOptionsPlist ${{ runner.temp }}/exportOptions.plist \
+            -allowProvisioningUpdates
 
       - name: 📤 上传 .ipa
         uses: actions/upload-artifact@v4
         with:
           name: TaxApp-iOS
-          path: ${{ runner.temp }}/ipa/TaxApp.ipa
+          path: ${{ runner.temp }}/ipa/*.ipa
           if-no-files-found: error
           retention-days: 30
 
@@ -160,10 +107,7 @@ jobs:
         run: |
           echo "## ✅ iOS 构建完成" >> $GITHUB_STEP_SUMMARY
           echo "" >> $GITHUB_STEP_SUMMARY
-          echo "### 下载 .ipa" >> $GITHUB_STEP_SUMMARY
-          echo "打开本页底部的 **Artifacts** 区域，下载 TaxApp-iOS.zip" >> $GITHUB_STEP_SUMMARY
+          echo "打开 **Artifacts** → 下载 TaxApp-iOS.zip → 解压得到 .ipa" >> $GITHUB_STEP_SUMMARY
           echo "" >> $GITHUB_STEP_SUMMARY
           echo "### 安装方式" >> $GITHUB_STEP_SUMMARY
-          echo "1. 解压得到 .ipa" >> $GITHUB_STEP_SUMMARY
-          echo "2. 爱思助手 → 应用游戏 → 导入安装" >> $GITHUB_STEP_SUMMARY
-          echo "3. 或 Sideloadly → 拖入 .ipa → 输入 Apple ID → Start" >> $GITHUB_STEP_SUMMARY
+          echo "爱思助手 → 应用游戏 → 导入安装" >> $GITHUB_STEP_SUMMARY
