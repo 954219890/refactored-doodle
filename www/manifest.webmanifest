@@ -8,7 +8,7 @@
   "display": "standalone",
   "display_override": ["standalone", "fullscreen", "minimal-ui"],
   "background_color": "#f5f7fb",
-  "theme_color": "#f5f7fb",
+  "theme_color": "#2f86ff",
   "orientation": "portrait",
   "categories": ["finance", "utilities", "productivity"],
   "lang": "zh-CN",
