@@ -10,8 +10,7 @@
   <meta name="mobile-web-app-capable" content="yes" />
   <meta name="application-name" content="个人所得税" />
   <meta name="format-detection" content="telephone=no" />
-  <meta name="theme-color" content="#2f86ff" />
-  <meta name="apple-mobile-web-app-status-bar-style" content="default" />
+  <meta name="theme-color" content="#f5f7fb" />
   <!-- iOS 启动图（Splash Screen） -->
   <link rel="apple-touch-startup-image" href="assets/app-icon-512.png" media="(device-width: 375px) and (device-height: 812px) and (-webkit-device-pixel-ratio: 3)" />
   <link rel="apple-touch-startup-image" href="assets/app-icon-512.png" media="(device-width: 414px) and (device-height: 896px) and (-webkit-device-pixel-ratio: 2)" />
@@ -162,11 +161,11 @@
 
     /* 首页：蓝色背景无缝延伸到状态栏/灵动岛区域 */
     .ios-standalone #home {
-      padding-top: env(safe-area-inset-top, 0px);
-      background: #3488f5;
+      padding-top: 0;
+      background: var(--page);
     }
     .ios-standalone #home .home-top {
-      padding-top: 28px;
+      padding-top: calc(28px + var(--safe-top));
     }
     /* 非 standalone 模式：用 --safe-top 保持合理的间距 */
     #home .home-top {
@@ -184,8 +183,8 @@
 
     /* 子页面 header：白色背景无缝延伸到状态栏 */
     .ios-standalone .sub-header {
-      padding-top: env(safe-area-inset-top, 0px);
-      min-height: calc(61px + env(safe-area-inset-top, 0px));
+      padding-top: var(--safe-top);
+      min-height: calc(61px + var(--safe-top));
     }
 
     /* iOS 键盘打开时自动调整布局（通过 JS 添加类） */
@@ -1609,6 +1608,7 @@
         new URLSearchParams(location.search).get('preview') === 'standalone'
       );
       document.documentElement.classList.toggle('is-standalone', isStandalone);
+      document.documentElement.classList.toggle('ios-standalone', isStandalone);
 
       // 取当前实际视口高度
       const h = Math.max(
@@ -1622,8 +1622,7 @@
 
       // standalone 模式下根据当前页面切换状态栏背景色
       if (isStandalone && metaTheme) {
-        const isHome = document.querySelector('#home.active');
-        metaTheme.content = isHome ? '#2f86ff' : '#ffffff';
+        metaTheme.content = '#f5f7fb';
       }
     };
 

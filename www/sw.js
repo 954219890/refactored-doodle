@@ -8,7 +8,7 @@
  *   外部资源：Network-Only
  */
 
-const CACHE_NAME = 'tax-app-v3';
+const CACHE_NAME = 'tax-app-v31-safe-top';
 const ASSETS_TO_CACHE = [
   './',
   './index.html',
