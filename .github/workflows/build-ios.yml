@@ -46,9 +46,10 @@ jobs:
       - name: 🏗️ 构建 .xcarchive（无签名）
         run: |
           cd ios/App
+          ls -la
           xcodebuild archive \
-            -workspace App.xcworkspace \
-            -scheme App \
+            -project App.xcodeproj \
+            -target App \
             -configuration Release \
             -archivePath ${{ runner.temp }}/TaxApp.xcarchive \
             CODE_SIGNING_ALLOWED=NO \
